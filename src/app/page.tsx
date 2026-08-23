@@ -9,9 +9,17 @@ export default function HomePage() {
 
   useEffect(() => {
     fetch("/api/sessions")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`API错误: ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
         setSessions(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("加载场次失败:", err);
+        setSessions([]);
         setLoading(false);
       });
   }, []);
@@ -102,12 +110,16 @@ function CreateSessionForm({ onCreated }: { onCreated: (s: any) => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: title.trim(), slug: finalSlug }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `请求失败: ${res.status}`);
+      }
       const data = await res.json();
       onCreated(data);
       setTitle("");
       setSlug("");
-    } catch (e) {
-      alert("创建失败，slug可能已存在");
+    } catch (e: any) {
+      alert("创建失败: " + e.message);
     } finally {
       setCreating(false);
     }
